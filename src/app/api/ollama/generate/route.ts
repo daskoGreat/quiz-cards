@@ -1,38 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `
-Du är en pedagogisk och peppande lärare för högstadieelever (13-16 år).
-Din uppgift är att läsa elevens text och skapa ett detaljerat och lärorikt flervalsquiz (Multiple Choice Quiz).
-Skriv på svenska om inte texten är på engelska. Tonen ska vara tydlig, uppmuntrande men inte barnslig. Inga magi-påståenden.
+Du är en pedagogisk och peppande lärare för svenska högstadieelever (13-16 år).
+Din uppgift är att skapa ett flervalsquiz (Multiple Choice Quiz) baserat på den text du får.
 
-Du MÅSTE svara EXAKT enligt detta JSON-schema:
+REGLER FÖR FRÅGOR:
+1. Använd svenska. Språket ska vara tydligt och anpassat för åldersgruppen.
+2. Skapa så många meningsfulla frågor som möjligt från texten. Fokusera på begrepp, fakta och samband.
+3. Varje fråga MÅSTE ha exakt 4 svarsalternativ.
+4. EXAKT ETT av alternativen måste vara korrekt.
+5. De felaktiga svaren (distraktorer) ska vara rimliga men tydligt felaktiga för någon som läst texten.
+6. Förklaringen ska vara pedagogisk och hjälpa eleven att förstå VARFÖR svaret är rätt, inte bara bekräfta det.
+7. Frågorna ska vara korta och kärnfulla.
+
+DU MÅSTE SVARA EXAKT ENLIGT DETTA JSON-SCHEMA:
 {
-  "title": "En passande titel på kortleken",
+  "title": "En passande titel på quizet",
   "language": "sv",
   "cards": [
     {
-      "type": "mcq",
-      "difficulty": 1, // 1 (lätt), 2 (medel), 3 (svårt)
       "question": "Frågan",
-      "answer": "Det rätta svarsalternativet",
-      "explanation": "En kort förklaring varför detta är rätt",
-      "options": ["alternativ A", "alternativ B", "DET RÄTTA SVARET", "alternativ D"], // Alltid 4 alternativ. Se till att variera vilket index som är det rätta!
-      "correctIndex": 2, // Indexet för det rätta alternativet i listan ovan (0, 1, 2 eller 3)
-      "sourceSnippet": "Exakt citat från texten som bevisar svaret"
+      "options": ["alternativ A", "alternativ B", "alternativ C", "alternativ D"],
+      "answer": "Det exakta textinnehållet för det rätta svaret (måste finnas i options)",
+      "explanation": "En pedagogisk förklaring",
+      "topic": "Ämnesområde",
+      "difficulty": 1 // 1-3
     }
   ]
 }
 
-Skapa upp till 10 kort. ALLA kort måste vara av typen "mcq" och ha exakt 4 svarsalternativ.
-VIKTIGT: Placera INTE alltid det rätta svaret på första plats (index 0). Variera positionen slumpmässigt för varje fråga.
-ALLTID returnera en GILTIG JSON. Inget tacksnack eller förklaringar utanför JSON-objektet.
+VIKTIGT: 
+- Returnera ENDAST giltig JSON.
+- Se till att 'answer' matchar exakt ett av elementen i 'options'.
+- Variera ordningen på alternativen i JSON-outputen så att det rätta svaret inte alltid kommer först.
 `;
 
-function shuffleOptions(card: any) {
-    if (!card.options || !Array.isArray(card.options)) return card;
+function splitTextIntoChunks(text: string, maxChunkSize: number = 2500): string[] {
+    const chunks: string[] = [];
+    let currentPos = 0;
 
+    while (currentPos < text.length) {
+        let endPos = Math.min(currentPos + maxChunkSize, text.length);
+
+        // Try to find a good breaking point (period or newline)
+        if (endPos < text.length) {
+            const lastPeriod = text.lastIndexOf(".", endPos);
+            const lastNewline = text.lastIndexOf("\n", endPos);
+            const breakpoint = Math.max(lastPeriod, lastNewline);
+
+            if (breakpoint > currentPos + maxChunkSize * 0.5) {
+                endPos = breakpoint + 1;
+            }
+        }
+
+        chunks.push(text.substring(currentPos, endPos).trim());
+        currentPos = endPos;
+    }
+
+    return chunks.filter(c => c.length > 100); // Ignore very small chunks
+}
+
+function validateCard(card: any): boolean {
+    if (!card.question || !Array.isArray(card.options) || card.options.length !== 4) return false;
+    if (!card.answer || !card.explanation) return false;
+
+    const uniqueOptions = new Set(card.options);
+    if (uniqueOptions.size !== 4) return false;
+
+    if (!card.options.includes(card.answer)) return false;
+
+    return true;
+}
+
+function shuffleCard(card: any) {
     const options = [...card.options];
-    const correctAnswer = card.answer;
 
     // Fisher-Yates shuffle
     for (let i = options.length - 1; i > 0; i--) {
@@ -40,18 +81,14 @@ function shuffleOptions(card: any) {
         [options[i], options[j]] = [options[j], options[i]];
     }
 
-    // Find new index of the correct answer
-    const newCorrectIndex = options.indexOf(correctAnswer);
-
-    // If for some reason the answer string wasn't in options, or multiple matches,
-    // we fallback to the AI's provided correctIndex if it still points to the right text
-    // but usually index calculation based on text is safer after a shuffle.
+    const newCorrectIndex = options.indexOf(card.answer);
 
     return {
         ...card,
         id: crypto.randomUUID(),
         options,
-        correctIndex: newCorrectIndex !== -1 ? newCorrectIndex : card.correctIndex
+        correctIndex: newCorrectIndex,
+        type: "mcq" // Ensure backward compatibility with UI if it expects 'type'
     };
 }
 
@@ -65,12 +102,48 @@ function repairJson(brokenJson: string): string {
     return brokenJson;
 }
 
+async function generateWithRetry(chunk: string, model: string, token: string, endpoint: string, retries = 2): Promise<any[]> {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: "system", content: SYSTEM_PROMPT },
+                        { role: "user", content: `Skapa så många unika quizfrågor som möjligt för följande text:\n\n${chunk}` }
+                    ],
+                    temperature: 0.3,
+                    response_format: { type: "json_object" }
+                }),
+                signal: AbortSignal.timeout(60000), // 1 minute per chunk
+            });
+
+            if (!res.ok) continue;
+
+            const data = await res.json();
+            const content = data.choices[0].message.content;
+            let parsed = JSON.parse(repairJson(content));
+
+            if (parsed && Array.isArray(parsed.cards)) {
+                return parsed.cards.filter(validateCard).map(shuffleCard);
+            }
+        } catch (e) {
+            console.warn(`Retry ${i} failed for chunk:`, e);
+        }
+    }
+    return [];
+}
+
 export async function POST(req: NextRequest) {
     try {
         const { text } = await req.json();
 
         const token = process.env.GITHUB_TOKEN;
-        // Strip 'openai/' prefix if it exists to prevent 'unknown model' errors
         const rawModel = process.env.GITHUB_MODEL || "gpt-4o-mini";
         const model = rawModel.replace(/^openai\//, "");
         const endpoint = "https://models.inference.ai.azure.com/chat/completions";
@@ -79,49 +152,43 @@ export async function POST(req: NextRequest) {
             throw new Error("GITHUB_TOKEN saknas i serverns configuration.");
         }
 
-        const res = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: [
-                    { role: "system", content: SYSTEM_PROMPT },
-                    { role: "user", content: `Skapa flashcards för följande text:\n\n${text.substring(0, 15000)}` }
-                ],
-                temperature: 0.3,
-                response_format: { type: "json_object" }
-            }),
-            signal: AbortSignal.timeout(180000), // 3 minuter
+        const chunks = splitTextIntoChunks(text);
+        console.log(`Processing document in ${chunks.length} chunks`);
+
+        // Limit maximum chunks to avoid extreme runtimes/costs
+        const limitedChunks = chunks.slice(0, 10);
+
+        let allCards: any[] = [];
+        let deckTitle = "Genererat Quiz";
+
+        // Process chunks (can be concurrent, but let's be safe with rate limits)
+        const chunkResults = await Promise.all(
+            limitedChunks.map(chunk => generateWithRetry(chunk, model, token, endpoint))
+        );
+
+        chunkResults.forEach((cards) => {
+            allCards = [...allCards, ...cards];
         });
 
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(`GitHub Models status: ${res.status}. ${JSON.stringify(errorData)}`);
-        }
+        // Deduplicate based on question text
+        const seenQuestions = new Set();
+        const uniqueCards = allCards.filter(card => {
+            const normalized = card.question.toLowerCase().trim();
+            if (seenQuestions.has(normalized)) return false;
+            seenQuestions.add(normalized);
+            return true;
+        });
 
-        const data = await res.json();
-        const resultString = data.choices[0].message.content;
+        const finalDeck = {
+            title: deckTitle,
+            language: "sv",
+            total_questions: uniqueCards.length,
+            cards: uniqueCards
+        };
 
-        let parsedCards = null;
-        try {
-            parsedCards = JSON.parse(resultString);
-        } catch {
-            try {
-                const repaired = repairJson(resultString);
-                parsedCards = JSON.parse(repaired);
-            } catch (e) {
-                throw new Error("Kunde inte läsa resultatet från AI. Svaret var inte giltig JSON.");
-            }
-        }
+        console.log(`Generated ${uniqueCards.length} unique cards from ${chunks.length} chunks`);
 
-        if (parsedCards && Array.isArray(parsedCards.cards)) {
-            parsedCards.cards = parsedCards.cards.map((card: any) => shuffleOptions(card));
-        }
-
-        return NextResponse.json({ success: true, deck: parsedCards });
+        return NextResponse.json({ success: true, deck: finalDeck });
     } catch (error: any) {
         console.error("Generate API Error:", error.message);
         return NextResponse.json(
