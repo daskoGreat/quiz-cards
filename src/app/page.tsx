@@ -1,65 +1,85 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Dropzone } from "@/components/Dropzone";
+import { SavedDecks } from "@/components/SavedDecks";
+import { AlertCircle } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFileSelect = async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Ett okänt fel uppstod");
+
+      sessionStorage.setItem("quizCards_text", data.text);
+      sessionStorage.setItem("quizCards_filename", file.name);
+      router.push("/preview");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="w-full max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <header className="text-center space-y-4">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-foreground">
+            Förvandla dina anteckningar till <span className="text-primary">Quiz Cards</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg text-muted max-w-2xl mx-auto">
+            Plugga smartare, inte hårdare. Ladda upp ett dokument så skapar vi flashcards med frågor och svar.
+            Helt automatiskt och lokalt på din dator.
           </p>
+        </header>
+
+        <div className="space-y-4">
+          <Dropzone onFileSelect={handleFileSelect} isLoading={isLoading} />
+          {error && (
+            <div className="p-4 rounded-xl bg-danger/10 text-danger text-sm font-medium flex items-center justify-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              {error}
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <SavedDecks />
+
+        {/* How it works */}
+        <section className="grid sm:grid-cols-3 gap-8 pt-8 border-t border-border">
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">1</div>
+            <h3 className="text-lg font-semibold">Ladda upp</h3>
+            <p className="text-muted text-sm leading-relaxed">Dra in dina anteckningar, kompendium eller instuderingsfrågor. Vi plockar ut texten åt dig.</p>
+          </div>
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">2</div>
+            <h3 className="text-lg font-semibold">Generera</h3>
+            <p className="text-muted text-sm leading-relaxed">Din lokala AI analyserar texten och bygger smarta kort med begrepp, flerval och sant/falskt.</p>
+          </div>
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">3</div>
+            <h3 className="text-lg font-semibold">Plugga!</h3>
+            <p className="text-muted text-sm leading-relaxed">Träna på korten, få feedback på hur det går, och redigera dem precis som du vill ha dem.</p>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Quiz Cards 🧠
 
-## Getting Started
+En webbapp för högstadieelever som förvandlar vilket dokument som helst (PDF, DOCX, TXT, MD) till anpassade quiz cards (flashcards) för att plugga, direkt och lokalt via Ollama.
 
-First, run the development server:
+## Funktioner
+- Skapa Flashcards: Automatisk extraktion av text från dokument och generering av 3 typer av kort (Begrepp, Flerval, Sant/Falskt).
+- Lokal & Trygg AI: All generering sker lokalt på din dator via Ollama. Din data lämnar aldrig din maskin.
+- Spaced Repetition: Appen lär sig vad du kan och vad du behöver träna mer på, med en inbyggd studiemotor.
+- Redigera & Exportera: Ändra kort som inte blev perfekta, och exportera hela kortlekar som JSON.
+
+## Kom igång
+
+### 1. Installera och starta Ollama
+Eftersom appen körs lokalt behöver du ha [Ollama](https://ollama.com) installerat på din dator.
+När det är installerat, ladda ner en bra svensktalande modell i din terminal:
 
 ```bash
+ollama run llama3.1
+```
+Låt sedan Ollama vara igång i bakgrunden.
+
+### 2. Starta appen
+Installera beroenden och starta servern:
+
+```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Appen finns nu tillgänglig på [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Konfigurera (Valfritt)
+Klicka på kugghjulet (Inställningar) uppe i högra hörnet i appen för att verifiera att den har kontakt med din lokala Ollama-instans och för att välja vilken modell du vill använda.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Testa direkt!
+I mappen `demo/` finns det några exempeldokument som du kan dra rakt in i appen för att testa hur det fungerar.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Systemkrav
+- Node.js 18+
+- Ollama
+- (Next.js App Router, Tailwind v4, React 19)
