@@ -72,48 +72,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                 <div>
                     <h2 className="text-xl font-semibold text-foreground">Inställningar</h2>
-                    <p className="text-sm text-muted">Konfigurera din lokala Ollama-integration.</p>
+                    <p className="text-sm text-muted">Konfigurera din AI-integration.</p>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground">Ollama Base URL</label>
-                        <input
-                            type="text"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                            placeholder="http://localhost:11434"
-                        />
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <label className="text-sm font-medium text-foreground">Modellnamn</label>
-                        {availableModels.length > 0 ? (
-                            <select
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                                className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                            >
-                                {availableModels.map((m) => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <input
-                                type="text"
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                                className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                                placeholder="llama3.1"
-                            />
-                        )}
-                        <p className="text-xs text-muted">Exempel: llama3.1, mistral, gemma</p>
-                    </div>
+                    <p className="text-sm text-muted">
+                        Applikationen använder nu GitHub Models för att generera quiz. Inga lokala inställningar krävs längre.
+                    </p>
 
                     <div className="pt-2 flex items-center gap-3">
                         <Button variant="outline" size="sm" onClick={testConnection} isLoading={status === "testing"}>
-                            Testa anslutning
+                            Kontrollera AI-status
                         </Button>
 
                         {status === "success" && (
@@ -130,8 +99,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </div>
 
                 <div className="pt-4 border-t border-border flex flex-col sm:flex-row justify-end gap-3">
-                    <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto order-2 sm:order-1">Avbryt</Button>
-                    <Button variant="primary" onClick={handleSave} className="w-full sm:w-auto order-1 sm:order-2">Spara</Button>
+                    <Button variant="primary" onClick={onClose} className="w-full sm:w-auto">Stäng</Button>
                 </div>
             </div>
         </div>

@@ -39,32 +39,41 @@ function repairJson(brokenJson: string): string {
 
 export async function POST(req: NextRequest) {
     try {
-        const { text, ollamaUrl, model } = await req.json();
-        const url = ollamaUrl || "http://localhost:11434";
-        const selectedModel = model || "llama3.1";
+        const { text } = await req.json();
 
-        const res = await fetch(`${url}/api/generate`, {
+        const token = process.env.GITHUB_TOKEN;
+        const model = process.env.GITHUB_MODEL || "gpt-4o-mini";
+        const endpoint = "https://models.inference.ai.azure.com/chat/completions";
+
+        if (!token) {
+            throw new Error("GITHUB_TOKEN saknas i serverns configuration.");
+        }
+
+        const res = await fetch(endpoint, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify({
-                model: selectedModel,
-                prompt: `Skapa flashcards för följande text:\n\n${text.substring(0, 15000)}`, // limit text len basic
-                system: SYSTEM_PROMPT,
-                stream: false,
-                format: "json", // Help Ollama stay structured
-                options: {
-                    temperature: 0.3,
-                }
+                model: model,
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: `Skapa flashcards för följande text:\n\n${text.substring(0, 15000)}` }
+                ],
+                temperature: 0.3,
+                response_format: { type: "json_object" }
             }),
             signal: AbortSignal.timeout(180000), // 3 minuter
         });
 
         if (!res.ok) {
-            throw new Error(`Ollama status: ${res.status}`);
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(`GitHub Models status: ${res.status}. ${JSON.stringify(errorData)}`);
         }
 
         const data = await res.json();
-        const resultString = data.response;
+        const resultString = data.choices[0].message.content;
 
         let parsedCards = null;
         try {

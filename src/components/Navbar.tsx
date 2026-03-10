@@ -22,7 +22,7 @@ export function Navbar() {
                             variant="ghost"
                             size="icon"
                             aria-label="Inställningar"
-                            title="Ollama inställningar"
+                            title="Inställningar"
                             onClick={() => setIsSettingsOpen(true)}
                         >
                             <Settings className="w-5 h-5 text-muted hover:text-foreground" />

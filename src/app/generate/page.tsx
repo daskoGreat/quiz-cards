@@ -30,8 +30,6 @@ export default function GeneratePage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         text,
-                        ollamaUrl: settings.ollamaUrl,
-                        model: settings.model,
                     }),
                 });
 
@@ -65,7 +63,7 @@ export default function GeneratePage() {
                 }
             } catch (err: any) {
                 if (isSubscribed) {
-                    setError(err.message || "Misslyckades att ansluta till Ollama. Kolla så att den är igång.");
+                    setError(err.message || "Misslyckades att ansluta till AI-tjänsten. Kontrollera din anslutning.");
                 }
             }
         }
@@ -91,7 +89,7 @@ export default function GeneratePage() {
 
                         <div className="space-y-2">
                             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                                Din lokala AI läser texten...
+                                AI-motorn läser texten...
                             </h1>
                             <p className="text-muted text-lg">
                                 Genererar smarta quiz cards. Det här kan ta någon minut.
