@@ -123,7 +123,7 @@ async function generateWithRetry(chunk: string, model: string, token: string, en
                             signal: AbortSignal.timeout(60000), // 1 minute per chunk
                   });
 
-            if (!res.ok) continue;
+            if (!res.ok) { console.warn(`Gateway HTTP ${res.status} for chunk:`, await res.text()); continue; }
 
             const data = await res.json();
                   const content = data.choices[0].message.content;
