@@ -144,13 +144,13 @@ export async function POST(req: NextRequest) {
           const { text } = await req.json();
 
       // GitHub Models (models.inference.ai.azure.com) retired 2026-07-30.
-      // Using Vercel AI Gateway instead - already available on this account.
-      const token = process.env.AI_GATEWAY_API_KEY;
-          const model = process.env.AI_GATEWAY_MODEL || "openai/gpt-4o-mini";
-          const endpoint = "https://ai-gateway.vercel.sh/v1/chat/completions";
+      // Using Groq instead - free tier, no credit card required.
+      const token = process.env.GROQ_API_KEY;
+          const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+          const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
       if (!token) {
-              throw new Error("AI_GATEWAY_API_KEY saknas i serverns konfiguration.");
+              throw new Error("GROQ_API_KEY saknas i serverns konfiguration.");
       }
 
       const chunks = splitTextIntoChunks(text);
