@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
       // GitHub Models (models.inference.ai.azure.com) retired 2026-07-30.
       // Using Groq instead - free tier, no credit card required.
       const token = process.env.GROQ_API_KEY;
-          const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+          const model = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
           const endpoint = "https://api.groq.com/openai/v1/chat/completions";
 
       if (!token) {
