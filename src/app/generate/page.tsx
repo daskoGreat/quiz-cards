@@ -6,6 +6,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { BrainCircuit, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { saveDeck, Deck, Card } from "@/lib/storage";
+import { parseJsonResponse } from "@/lib/utils";
 
 export default function GeneratePage() {
     const router = useRouter();
@@ -33,7 +34,7 @@ export default function GeneratePage() {
                     }),
                 });
 
-                const data = await res.json();
+                const data = await parseJsonResponse(res);
                 if (!res.ok) {
                     throw new Error(data.error || "Okänt fel vid generering");
                 }

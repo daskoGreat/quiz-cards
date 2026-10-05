@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Dropzone } from "@/components/Dropzone";
+import { Dropzone, MAX_FILE_SIZE_MB } from "@/components/Dropzone";
 import { SavedDecks } from "@/components/SavedDecks";
 import { AlertCircle } from "lucide-react";
+import { parseJsonResponse } from "@/lib/utils";
 
 export default function Home() {
   const router = useRouter();
@@ -12,8 +13,14 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = async (file: File) => {
-    setIsLoading(true);
     setError(null);
+
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(`Filen är för stor (max ${MAX_FILE_SIZE_MB}MB). Prova ett mindre dokument.`);
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -23,7 +30,7 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) throw new Error(data.error || "Ett okänt fel uppstod");
 
       sessionStorage.setItem("quizCards_text", data.text);

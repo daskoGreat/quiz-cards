@@ -4,6 +4,10 @@ import { UploadCloud, FileType2 } from "lucide-react";
 import { useCallback, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 
+// Vercel's serverless functions hard-reject bodies over ~4.5MB regardless of
+// what the app itself allows, so this must stay at or below that ceiling.
+export const MAX_FILE_SIZE_MB = 4;
+
 interface DropzoneProps {
     onFileSelect: (file: File) => void;
     isLoading?: boolean;
@@ -87,7 +91,7 @@ export function Dropzone({ onFileSelect, isLoading }: DropzoneProps) {
             </h2>
 
             <p className="text-sm text-muted max-w-sm">
-                Stödjer PDF, DOCX, TXT och MD. Max filstorlek: 25MB.
+                Stödjer PDF, DOCX, TXT och MD. Max filstorlek: {MAX_FILE_SIZE_MB}MB.
             </p>
 
             <div className="mt-4 text-xs font-medium text-muted bg-background px-3 py-1 rounded-full inline-flex items-center gap-1.5 border border-border">

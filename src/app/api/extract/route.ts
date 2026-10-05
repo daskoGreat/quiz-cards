@@ -10,8 +10,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Ingen fil uppladdad." }, { status: 400 });
         }
 
-        if (file.size > 25 * 1024 * 1024) {
-            return NextResponse.json({ error: "Filen är för stor. Max 25MB." }, { status: 400 });
+        // Keep in sync with MAX_FILE_SIZE_MB in src/components/Dropzone.tsx.
+        // Vercel rejects larger request bodies itself before this code runs,
+        // with a non-JSON response, so this must stay at or below ~4.5MB.
+        if (file.size > 4 * 1024 * 1024) {
+            return NextResponse.json({ error: "Filen är för stor. Max 4MB." }, { status: 400 });
         }
 
         const arrayBuffer = await file.arrayBuffer();
